@@ -21,7 +21,7 @@ package org.example
 import org.apache.flink.streaming.api.scala._
 
 /**
- * This example shows an implementation of WordCount with data from a text socket. 
+ * This example shows an implementation of WordCount with data from a text socket.
  * To run the example make sure that the service providing the text data is already up and running.
  *
  * To start an example socket text stream on your local machine run netcat from a command line, 
@@ -42,11 +42,11 @@ import org.apache.flink.streaming.api.scala._
  *   - write a simple Flink Streaming program in scala.
  *   - write and use user-defined functions.
  */
-object SocketTextStreamWordCount {
+object SocketTextStreamTransformations {
 
   def main(args: Array[String]) {
     if (args.length != 2) {
-      System.err.println("USAGE:\nSocketTextStreamWordCount <hostname> <port>")
+      System.err.println("USAGE:\nSocketTextStreamTransformations <hostname> <port>")
       return
     }
 
@@ -54,15 +54,22 @@ object SocketTextStreamWordCount {
     val port = args(1).toInt
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    //Create streams for names and counts by mapping the inputs to the corresponding objects
     val text = env.socketTextStream(hostName, port)
-    val counts = text.flatMap { _.toLowerCase.split("\\W+") filter { _.nonEmpty } }
-      .map { (_, 1) }
-      .keyBy(0)
-      .sum(1)
 
-    counts print
+    // Demonstrate basic transformations like map, filter, and union
+    val mapped = text.map("mapped: " + _)
+    val filtered = text.filter(_.head.isLower).map("filter lower: " + _)
+
+    val splitted = text.split(inputStr => if(inputStr.head.isLower) List("lower") else List("upper"))
+    val splitLower = splitted.select("lower").map("split lower: " + _)
+    val splitUpper = splitted.select("upper").map("split upper: " + _)
+
+    val union = mapped
+      .union(filtered)
+      .union(splitLower)
+      .union(splitUpper)
+
+    union print
 
     env.execute("Scala SocketTextStreamWordCount Example")
   }
